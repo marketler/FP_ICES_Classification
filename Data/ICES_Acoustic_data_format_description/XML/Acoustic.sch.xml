@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<schema xmlns="http://purl.oclc.org/dsdl/schematron"  xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+
+  <title>Schematron validation rules for Acoustic</title>
+
+  <!--Vocabulary validation-->
+  <pattern id="Vocabulary validation">
+    <title>Validation of vocabulary</title>
+    <rule context="*[@CodeType]" id="Vocabulary validation">
+      <assert id='{"Type":"Critical error","ID": "5"}'
+              test="string-length(current()) = 0 or document(@CodeType)/CodeType/Code[upper-case(Key)=upper-case(current())]">
+        '<value-of select="current()"/>' is not a valid vocabulary in <value-of select="@CodeType"/>
+      </assert>
+    </rule>
+  </pattern>
+
+  <!--Check cross over with vocab relations-->
+  <pattern id="Vocabulary relation validation">
+    <rule context="Vocabulary" id="Vocabulary relation validation">
+      <assert id='{"Type":"Critical error","ID": "6"}'
+              test="string-length(current()/Organisation) = 0 or document('https://acoustic.ices.dk/Services/Schema/XML/CodeRelation/EDMO;ISO_3166.xml')/CodeRelation/Relation[upper-case(CodeOne)=upper-case(current()/Organisation) and upper-case(CodeSecond)=upper-case(current()/Country)]">
+        Organisation '<value-of select="Organisation"/>' and Country '<value-of select="Country"/>' are not related
+      </assert>
+      <!--<assert id="{"Type":"Critical error","ID": '23'}" 
+              test="string-length(current()/Type) = 0 or document('https://acoustic.ices.dk/Services/Schema/XML/CodeRelation/AC_AcousticDataType;AC_DataUnit.xml')/CodeRelation/Relation[upper-case(CodeOne)=upper-case(current()/Type) and upper-case(CodeSecond)=upper-case(current()/Unit)]">
+        DataType '<value-of select=Type/>' and DataUnit '<value-of select="Unit"/>' are not related
+      </assert>-->
+
+      <!--<assert id="{"Type":"Critical error","ID": '47'}"
+        test="document('https://acoustic.ices.dk/Services/Schema/XML/CodeRelation/AC_Survey;SHIPC.xml')/CodeRelation/Relation[upper-case(CodeOne)=upper-case(current()/Survey) and upper-case(CodeSecond)=upper-case(current()/Platform)]">
+        Survey '<value-of select="Survey"/>' and Platform '<value-of select="Platform"/>' are not related
+      </assert>-->
+    </rule>
+
+    <rule context="Vocabulary/Survey/Code" id="Vocabulary relation validation ">
+      <assert id='{"Type":"Critical error","ID": "47"}'
+              test="document(concat('https://acoustic.ices.dk/Services/Validation/SurveyPlatformRelation/', current(), '/', ../../Platform))/Result/Status = 'true'">
+        Survey '<value-of select="current()"/>' and Platform '<value-of select="../../Platform"/>' are not related.
+      </assert>
+    </rule>
+  </pattern>
+
+  <pattern id="Range validation ">
+    <rule context="Cruise" id="Range validation">
+      <let name="result" value="document(concat('https://acoustic.ices.dk/Services/Validation/OverlapeCruise/', current()/StartDate, '/', current()/EndDate, '/', tokenize(current()/Platform/@IDREF, '_')[2], '/', tokenize(current()/Country/@IDREF, '_')[3]))/Result/Message"/>
+      <assert id='{"Type":"Critical error","ID": "60"}'
+      	test="string-length($result) = 0">
+        <value-of select="$result"/>
+      </assert>
+    </rule>
+  </pattern>
+  
+  <pattern id="Check uniqueness">
+    <!--Check Log level key-->
+    <rule context="Cruise" id="Check uniqueness">
+      <assert id='{"Type":"Critical error","ID": "25"}'
+              test="count(Log/Distance) = count(distinct-values(Log/Distance))">LogDistance is unique per cruise</assert>
+    </rule>
+    <rule context="Cruise/Survey/Code" id="Check uniqueness ">
+      <let name="result" value="document(concat('https://acoustic.ices.dk/Services/Validation/CheckCruiseAttributes/', ../../StartDate, '/', ../../EndDate, '/', tokenize(../../Platform/@IDREF, '_')[2], '/', tokenize(../../Country/@IDREF, '_')[3],'/', tokenize(current()/@IDREF, '_')[3], '/', ../../LocalID, '/', 'Organisation_', ../../Organisation/@IDREF , '/'))/Result/Message"/>
+      <assert id='{"Type":"Critical error","ID": "62"}'
+        test="string-length($result) = 0">
+        <value-of select="$result"/>
+      </assert>
+    </rule>
+  </pattern>
+	<!--<pattern id="Check same Data">
+		<rule context="Cruise/Log" id="Check uniqueness">
+			<assert id='{"Type":"Critical error","ID": "82"}'
+							test="not(Origin2/@IDREF = following-sibling::*[1]/Origin2/@IDREF)">
+				Log attributes should be unique for a given log.  
+				<value-of select="Origin2/@IDREF"/> = <value-of select="following-sibling::*[1]/Origin2/@IDREF"/> 
+				
+			</assert> 
+		</rule>
+	</pattern>-->
+  <pattern id="Range validation">
+    <rule context="Cruise/Log" id="Range validation">
+      <assert id='{"Type":"Critical error","ID": "20"}'
+      	test="substring(current()/Time, 1, 10) >= parent::Cruise/StartDate and parent::Cruise/EndDate >= substring(current()/Time, 1, 10)">
+        'LogTime' <value-of select="current()/Time"/> is out of boundaries.
+        CruiseStartDate = <value-of select="parent::Cruise/StartDate"/>,
+        CruiseEndDate = <value-of select="parent::Cruise/EndDate"/>
+      </assert>
+    </rule>
+  </pattern>
+
+  <pattern id="Position out of boundaries">
+    <rule context="Cruise/Log" id="Range validation">
+      <!--<assert id='{"Type":"Critical error","ID": "4"}' test="-90 &lt;= current()/Latitude and current()/Latitude &lt;= 90">
+        Latitude <value-of select="current()/Latitude" /> is out of boundaries. Latitude must be between -90 and 90
+      </assert>-->
+      <!--<assert id='{"Type":"Critical error","ID": "14"}' test="-180 &lt;= current()/Longitude and current()/Longitude &lt;= 180">
+        Longitude <value-of select="current()/Longitude" /> is out of boundaries. Longitude must be between -180 and 180
+      </assert>-->
+      <!--<assert id="{"Type":'Warning',"ID": '21'}"
+      	test="0 > document(concat('http://maps.googleapis.com/maps/api/elevation/xml?locations=', current()/Latitude, ',', current()/Longitude))/ElevationResponse/result/elevation">
+        Position is on land
+        Latitude = <value-of select="current()/Latitude"/>,
+        Longitude = <value-of select="current()/Longitude"/>
+      </assert>-->
+      <!-- commnet because it is so slow for big Acoustic file
+      <let name="positiononland" value="document(concat('https://acoustic.ices.dk/Services/Validation/PositionOnLand/', current()/Latitude, '/', current()/Longitude, '/3/'))/Result/Value"/>
+      <assert id="{"Type":'Warning',"ID": '58'}"
+      	test="$positiononland != 1">
+        Position is on land.
+        LogDistance <value-of select="current()/Distance"/>,
+        Latitude = <value-of select="current()/Latitude"/>,
+        Longitude = <value-of select="current()/Longitude"/>
+      </assert>-->
+      <!--<assert id="{"Type":'Warning',"ID": '50'}"
+      	test="$positiononland = 0 or $positiononland = 1">
+        Position is coastal
+        Latitude = <value-of select="current()/Latitude"/>,
+        Longitude = <value-of select="current()/Longitude"/>
+      </assert>-->
+      <let name="area" value="document(concat('https://acoustic.ices.dk/Services/Validation/PositionInSurveyArea/', concat(parent::Cruise/Survey/Code[1]/@IDREF,'~', parent::Cruise/Survey/Code[2]/@IDREF,'~', parent::Cruise/Survey/Code[3]/@IDREF), '/' , current()/Latitude, '/', current()/Longitude, '/'))/Result/Value"/>
+      <assert id='{"Type":"Warning","ID": "70"}'
+      	test="(upper-case(current()/Validity/@IDREF) = 'AC_LOGVALIDITY_I') or ($area != 0)">
+        Reported position is outside of the survey area boundaries, and the designated survey buffer zone.
+        Latitude = <value-of select="current()/Latitude"/>,
+        Longitude = <value-of select="current()/Longitude"/>
+      </assert>
+      <assert id='{"Type":"Warning","ID": "69"}'
+      	test="(upper-case(current()/Validity/@IDREF) = 'AC_LOGVALIDITY_I') or ($area != 1)">
+        Reported position is outside of the survey area.
+        Latitude = <value-of select="current()/Latitude"/>,
+        Longitude = <value-of select="current()/Longitude"/>
+      </assert>
+    </rule>
+  </pattern>
+
+  <pattern id="Check uniqueness Sample level">
+    <!--Check Sample level key-->
+    <rule context="Cruise/Log/Sample" id="Check uniqueness">
+      <assert id='{"Type":"Critical error","ID": "26"}'
+        test="count(../Sample[./ChannelDepthUpper = current()/ChannelDepthUpper and ./ChannelDepthLower = current()/ChannelDepthLower]) = 1">
+        Combination of ChannelDepthUpper and ChannelDepthLower is unique per log. LogDistance =  '<value-of select="Distance"/>'
+      </assert>
+    </rule>
+  </pattern>
+  
+  <pattern id="Logic check">
+     <rule context="Cruise/Log" id="Logic Check">
+      <assert id='{"Type":"Critical error","ID": "80"}' test="(Time &lt;= following-sibling::*[1]/Time)  or not(following-sibling::*)">
+		  Log Distance  '<value-of select="following-sibling::*[1]/Distance"/>' should increase with Log Time '<value-of select="following-sibling::*[1]/Time"/>'.
+	  </assert>
+    </rule>
+    <rule context="Cruise/Log/Sample" id="Logic check">
+      <assert id='{"Type":"Critical error","ID": "24"}'
+              test="number(ChannelDepthLower) > number(ChannelDepthUpper)">ChannelDepthUpper should be less than ChannelDepthLower</assert>
+    </rule>
+   
+  </pattern>
+  
+  <!--conditional mandatory fields-->
+  <pattern id="conditional mandatory fields">
+	  <rule context="Cruise/Log" id="Logic Check">
+		  <assert id='{"Type":"Critical error","ID": "81"}' test="(string-length(concat(current()/Origin2/@IDREF,current()/Latitude2,current()/Longitude2)) != 0 and string-length(current()/Latitude2)!=0 and string-length(current()/Longitude2)!=0 and string-length(current()/Origin2/@IDREF)!=0) or string-length(concat(current()/Origin2/@IDREF,current()/Latitude2,current()/Longitude2)) = 0">
+			  If one of the optional attributes latitude2, longitude2 and origin2 haven been used, then all are mandatory.  
+		  </assert>
+	  </rule>
+    <rule context="Cruise/Log/Sample/Data" id="Conditional mandatory fields">
+      <assert id='{"Type":"Critical error","ID": "75"}'
+              test="string-length(current()/EchoType/@IDREF) = 0 or string-length(current()/SaCategory/@IDREF) = 0">
+        There were found both SaCategory and EchoType fields in Data records, only one is allowed in the file.
+        LogDistance =  '<value-of select="../Distance"/>'
+      </assert>
+      <assert id='{"Type":"Critical error","ID": "74"}'
+             test="string-length(concat(current()/EchoType/@IDREF, current()/SaCategory/@IDREF)) != 0">
+        Neither SaCategory nor EchoType was found in the Data record.
+        LogDistance =  '<value-of select="../Distance"/>'
+      </assert>
+    </rule>
+  </pattern>
+
+  <pattern id="Check uniqueness Data level">
+    <!--Check Data level key-->
+    <rule context="Cruise/Log/Sample/Data" id="Check uniqueness">
+      <assert id='{"Type":"Critical error","ID": "63"}'
+        test="string-length(current()/SaCategory/@IDREF) = 0 or count(../Data[./SaCategory/@IDREF = current()/SaCategory/@IDREF and ./Type/@IDREF = current()/Type/@IDREF and ./Unit/@IDREF = current()/Unit/@IDREF]) = 1">
+        Combination of DataSaCategory, DataType, and DataUnit should be unique per Sample
+      </assert>
+      <assert id='{"Type":"Critical error","ID": "77"}'
+        test="string-length(current()/EchoType/@IDREF) = 0 or count(../Data[./EchoType/@IDREF = current()/EchoType/@IDREF and ./Type/@IDREF = current()/Type/@IDREF and ./Unit/@IDREF = current()/Unit/@IDREF]) = 1">
+        Combination of EchoType, DataType, and DataUnit should be unique per Sample
+      </assert>
+    </rule>
+  </pattern>
+
+  <pattern id="Check uniqueness EchoType level">
+    <!--Check Data level key-->
+    <rule context="Acoustic/EchoType/Species" id="Check uniqueness">
+      <assert id='{"Type":"Critical error","ID": "76"}'
+        test="count(../Species[./SpeciesCode/@IDREF = current()/SpeciesCode/@IDREF and ./SpeciesCategory = current()/SpeciesCategory]) = 1">
+        Duplicate combination of SpeciesCode and SpeciesCategory was found for the same EchoTypeID
+      </assert>
+    </rule>
+  </pattern>
+
+  <pattern id="Vocabulary relation validation ">
+    <rule context="Cruise/Log/Sample/Data" id="Vocabulary relation validation  ">
+      <assert id='{"Type":"Critical error","ID": "23"}'
+              test="document('https://acoustic.ices.dk/Services/Schema/XML/CodeRelation/AC_AcousticDataType;AC_DataUnit.xml')/CodeRelation/Relation[upper-case(CodeOne)=upper-case(tokenize(current()/Type/@IDREF, '_')[3]) and upper-case(CodeSecond)=upper-case(tokenize(current()/Unit/@IDREF, '_')[3])]">
+        DataType '<value-of select="tokenize(current()/Type/@IDREF, '_')[3]"/>' and DataUnit '<value-of select="tokenize(current()/Unit/@IDREF, '_')[3]"/>' are not related
+      </assert>
+    </rule>
+  </pattern>
+
+  <!--<pattern id="Range validation Calibration">
+    <rule context="Acoustic/Calibration" id="Range validation">
+      <assert id="{"Type":"Critical error","ID": '20'}"
+          test="substring(current()/Date, 1, 10) >= parent::Acoustic/Cruise/StartDate and parent::Acoustic/Cruise/EndDate >= substring(current()/Date, 1, 10)">
+       'CalibrationDate' <value-of select="current()/Date"/> is out of boundaries
+        CruiseStartDate = <value-of select="parent::Acoustic/Cruise/StartDate"/>,
+        CruiseEndDate = <value-of select="parent::Acoustic/Cruise/EndDate"/>,
+      </assert>
+    </rule>
+  </pattern>-->
+</schema>

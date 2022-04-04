@@ -1,0 +1,14 @@
+Cruise,Header,CruiseSurvey,CruiseCountry,CruisePlatform,CruiseStartDate,CruiseEndDate,CruiseOrganisation,CruiseLocalID,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Cruise,Record,CSHAS~HERAS,IE,45CE,2016-02-27,2016-03-22,396,45CE201605,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Haul,Header,CruiseLocalID,HaulGear,HaulNumber,HaulStationName,HaulStartTime,HaulDuration,HaulValidity,HaulStartLatitude,HaulStartLongitude,HaulStopLatitude,HaulStopLongitude,HaulStatisticalRectangle,HaulMinTrawlDepth,HaulMaxTrawlDepth,HaulBottomDepth,HaulDistance,HaulNetopening,HaulCodendMesh,HaulSweepLength,HaulGearExceptions,HaulDoorType,HaulWarpLength,HaulWarpDiameter,HaulWarpDensity,HaulDoorSurface,HaulDoorWeight,HaulDoorSpread,HaulWingSpread,HaulBuoyancy,HaulKiteArea,HaulGroundRopeWeight,HaulRigging,HaulTickler,HaulHydrographicStationID,HaulTowDirection,HaulSpeedGround,HaulSpeedWater,HaulWindDirection,HaulWindSpeed,HaulSwellDirection,HaulSwellHeight,HaulLogDistance
+Haul,Record,45CE201605,PEL,1,183,2016-03-04T14:55,30,V,56.7768,-0.4754,56.81,-0.4730,42F4,25,75,150,3670,3.5,22,75,B,R,80,20,75,1.4,780,15,25,350,4,450,10,12,204578902,184,4,5,340,4,240,0.6,14500
+Catch,Header,CruiseLocalID,HaulGear,HaulNumber,CatchDataType,CatchSpeciesCode,CatchSpeciesValidity,CatchSpeciesCategory,CatchSpeciesCategoryNumber,CatchWeightUnit,CatchSpeciesCategoryWeight,CatchSpeciesSex,CatchSubsampledNumber,CatchSubsamplingFactor,CatchSubsampleWeight,CatchLengthCode,CatchLengthClass,CatchLengthType,CatchNumberAtLength,CatchWeightAtLength,,,,,,,,,,,,,,,,,,,,,,,
+Catch,Record,45CE201605,PEL,1,R,126417,1,1,7000,kg,595,,4,1750,0.34,halfcm,215,1,1,,,,,,,,,,,,,,,,,,,,,,,,
+Catch,Record,45CE201605,PEL,1,R,126417,1,1,7000,kg,595,,4,1750,0.34,halfcm,220,1,1,,,,,,,,,,,,,,,,,,,,,,,,
+Catch,Record,45CE201605,PEL,1,R,126417,1,1,7000,kg,595,,4,1750,0.34,halfcm,225,1,2,0.22,,,,,,,,,,,,,,,,,,,,,,,
+Catch,Record,45CE201605,PEL,1,R,126436,1,1,25,kg,4.7,,,,4.7,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Biology,Header,CruiseLocalID,HaulGear,HaulNumber,CatchSpeciesCode,CatchSpeciesCategory,BiologyStockCode,BiologyFishID,BiologyLengthCode,BiologyLengthClass,BiologyWeightUnit,BiologyIndividualWeight,BiologyIndividualSex,BiologyIndividualMaturity,BiologyMaturityScale,BiologyIndividualAge,BiologyAgePlusGroup,BiologyAgeSource,BiologyGeneticSamplingFlag,BiologyStomachSamplingFlag,BiologyParasiteSamplingFlag,BiologyIndividualVertebraeCount,,,,,,,,,,,,,,,,,,,,,
+Biology,Record,45CE201605,PEL,1,126417,1,her-47d3,1,halfcm,215,gr,55,F,64,M6,5,,Scale,no,yes,NA,143,,,,,,,,,,,,,,,,,,,,,
+Biology,Record,45CE201605,PEL,1,126417,1,her-47d3,2,halfcm,220,gr,65,F,65,M6,7,plusgroup,Scale,no,yes,NA,143,,,,,,,,,,,,,,,,,,,,,
+Biology,Record,45CE201605,PEL,1,126417,1,her-47d3,3,halfcm,225,gr,115,F,65,M6,7,plusgroup,Scale,no,yes,NA,143,,,,,,,,,,,,,,,,,,,,,
+Biology,Record,45CE201605,PEL,1,126417,1,her-47d3,4,halfcm,225,gr,105,M,63,M6,3,,Scale,no,no,NA,143,,,,,,,,,,,,,,,,,,,,,

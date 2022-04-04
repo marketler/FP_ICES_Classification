@@ -1,0 +1,337 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<schema xmlns="http://purl.oclc.org/dsdl/schematron"  xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+
+  <title>Schematron validation rules for Biotic</title>
+
+  <!--Vocabulary validation-->
+  <pattern id="Vocabulary validation">
+    <title>Validation of vocabulary</title>
+    <rule context="*[@CodeType]" id="Vocabulary validation">
+      <assert id="{'Type':'Critical error', 'ID': '5'}" 
+              test="string-length(current()) = 0 or document(@CodeType)/CodeType/Code[upper-case(Key)=upper-case(current())]">
+        '<value-of select="current()"/>' is not a valid vocabulary in <value-of select="@CodeType"/>
+      </assert>
+    </rule>
+  </pattern>
+
+  <!--Check cross over with vocab relations-->
+  <pattern id="Vocabulary relation validation">
+    <rule context="Vocabulary" id="Vocabulary relation validation">
+      <assert id="{'Type':'Critical error', 'ID': '6'}" 
+              test="string-length(current()/Organisation) = 0 or document('https://acoustic.ices.dk/Services/Schema/XML/CodeRelation/EDMO;ISO_3166.xml')/CodeRelation/Relation[upper-case(CodeOne)=upper-case(current()/Organisation) and upper-case(CodeSecond)=upper-case(current()/Country)]">
+        Organisation '<value-of select="Organisation"/>' and Country '<value-of select="Country"/>' are not related
+      </assert>
+       <!--<assert id="{'Type':'Critical error', 'ID': '47'}"
+        test="document('https://acoustic.ices.dk/Services/Schema/XML/CodeRelation/AC_Survey;SHIPC.xml')/CodeRelation/Relation[upper-case(CodeOne)=upper-case(current()/Survey) and upper-case(CodeSecond)=upper-case(current()/Platform)]">
+        Survey '<value-of select="Survey"/>' and Platform '<value-of select="Platform"/>' are not related
+      </assert>-->
+   </rule>
+    <rule context="Vocabulary/Survey/Code" id="Vocabulary relation validation ">
+      <assert id="{'Type':'Critical error', 'ID': '47'}"
+              test="document(concat('https://acoustic.ices.dk/Services/Validation/SurveyPlatformRelation/', current(), '/', ../../Platform))/Result/Status = 'true'">
+        Survey '<value-of select="current()"/>' and Platform '<value-of select="../../Platform"/>' are not related
+      </assert>
+    </rule>
+  </pattern>
+
+  <pattern id="Range validation ">
+    <rule context="Cruise" id="Range validation">
+      <let name="result" value="document(concat('https://acoustic.ices.dk/Services/Validation/OverlapeCruise/', current()/StartDate, '/', current()/EndDate, '/', tokenize(current()/Platform/@IDREF, '_')[2], '/', tokenize(current()/Country/@IDREF, '_')[3]))/Result/Message"/>
+      <assert id="{'Type':'Critical error', 'ID': '60'}"
+      	test="string-length($result) = 0">
+        <value-of select="$result"/>
+      </assert>
+    </rule>
+  </pattern>
+  
+
+  <pattern id="Logic check Haul">
+    <rule context="Cruise/Haul" id="Logic check">
+      <assert id="{'Type':'Critical error', 'ID': '45'}"
+		    test="string-length(current()/MaxTrawlDepth) = 0 or string-length(current()/BottomDepth) = 0 or number(current()/BottomDepth) >= number(current()/MaxTrawlDepth)">
+        HaulMaxTrawlDepth can not be higher than HaulBottomDepth.
+        HaulNumber = <value-of select="current()/Number"/>
+      </assert>
+        <assert id='{"Type":"Critical error","ID": "80"}' test="(StartTime &lt;= following-sibling::*[1]/StartTime)  or not(following-sibling::*)">
+			Haul Number '<value-of select=" following-sibling::*[1]/Number"/>' should increase with Haul Start Time  <value-of select=" following-sibling::*[1]/StartTime"/>'.
+        </assert>
+      <assert id="{'Type':'Critical error', 'ID': '46'}"
+		    test="string-length(current()/MaxTrawlDepth) = 0 or number(current()/MaxTrawlDepth) >= number(current()/MinTrawlDepth)">
+        HaulMinTrawlDepth can not be higher than HaulMaxTrawlDepth.
+        HaulNumber = <value-of select="current()/Number"/>
+      </assert>
+      <assert id="{'Type':'Critical error', 'ID': '51'}"
+		    test="string-length(current()/BottomDepth) = 0 or number(current()/BottomDepth) >= number(current()/MinTrawlDepth)">
+        HaulMinTrawlDepth can not be higher than HaulBottomDepth.
+        HaulNumber = <value-of select="current()/Number"/>
+      </assert>
+      <assert id="{'Type':'Warning', 'ID': '53'}"
+		    test="(upper-case(current()/Validity/@IDREF) = 'AC_HAULVALIDITY_I') or count(current()/Catch) > 0">
+        Valid hauls are supposed to have related Catch records.
+        HaulNumber = <value-of select="current()/Number"/>
+      </assert>
+    </rule>
+  </pattern>
+
+  <pattern id="Range validation">
+    <rule context="Cruise/Haul" id="Range validation">
+      <assert id="{'Type':'Critical error', 'ID': '20'}"
+              test="substring(current()/StartTime, 1, 10) >= parent::Cruise/StartDate and parent::Cruise/EndDate >= substring(current()/StartTime, 1, 10)">
+        'HaulStartTime' <value-of select="current()/StartTime"/> is out of boundaries
+        CruiseStartDate = <value-of select="parent::Cruise/StartDate"/>,
+        CruiseEndDate = <value-of select="parent::Cruise/EndDate"/>
+      </assert>
+      <let name="result" value="document(concat('https://acoustic.ices.dk/Services/Validation/CheckDistanceByDuration/', current()/Duration, '/' , current()/StartLatitude,  '/' , current()/StartLongitude, '/' , current()/StopLatitude, '/' , current()/StopLongitude, '/' , current()/SpeedGround, '/'))/Result"/>
+      <assert id="{'Type':'Warning', 'ID': '37'}"
+        test="string-length(current()/StopLatitude) = 0 or string-length(current()/StopLongitude) = 0 or string-length(current()/SpeedGround) = 0 or ($result/Status = 'true')">
+        Haul distance calculated from the reported HaulDuration and HaulSpeedGround differs from the Haversine distance by more than 15%.
+        HaulNumber = <value-of select="Number"/>,
+        distance calculated from the reported HaulDuration and HaulSpeedGround = <value-of select="tokenize($result/Message, ';')[1]"/>,
+        Haversine distance = <value-of select="tokenize($result/Message, ';')[2]"/>
+      </assert>
+      <let name="haversine" value="document(concat('https://acoustic.ices.dk/Services/Validation/CheckDistanceByHaversine/', current()/Distance, '/' , current()/StartLatitude,  '/' , current()/StartLongitude, '/' , current()/StopLatitude, '/' , current()/StopLongitude, '/'))/Result"/>
+      <assert id="{'Type':'Warning', 'ID': '39'}"
+        test="string-length(current()/Distance) = 0 or string-length(current()/StopLatitude) = 0 or string-length(current()/StopLongitude) = 0 or ($haversine/Status = 'true')">
+        Reported HaulDistance differs from the Haversine distance by more than 15%.
+        HaulNumber = <value-of select="Number"/>,
+        HaulDistance = <value-of select="tokenize($haversine/Message, ';')[1]"/>,
+        Haversine distance = <value-of select="tokenize($haversine/Message, ';')[2]"/>
+      </assert>
+
+    </rule>
+  </pattern>
+
+  <pattern id="Position out of boundaries">
+    <rule context="Cruise/Haul" id="Range validation">
+      <assert id="{'Type':'Critical error', 'ID': '4'}" test="-90 &lt;= current()/StartLatitude and current()/StartLatitude &lt;= 90">
+        StartLatitude <value-of select="current()/StartLatitude" /> is out of boundaries. Latitude must be between -90 and 90
+      </assert>
+      <assert id="{'Type':'Critical error', 'ID': '14'}" test="-180 &lt;= current()/StartLongitude and current()/StartLongitude &lt;= 180">
+        StartLongitude <value-of select="current()/StartLongitude" /> is out of boundaries. Longitude must be between -180 and 180
+      </assert>
+      <assert id="{'Type':'Critical error', 'ID': '15'}" test="string-length(current()/StopLatitude) = 0 or -90 &lt;= current()/StopLatitude and current()/StopLatitude &lt;= 90">
+        StopLatitude <value-of select="current()/StopLatitude" /> is out of boundaries. Latitude must be between -90 and 90
+      </assert>
+      <assert id="{'Type':'Critical error', 'ID': '16'}" test="string-length(current()/StopLongitude) = 0 or -180 &lt;= current()/StopLongitude and current()/StopLongitude &lt;= 180">
+        StopLongitude <value-of select="current()/StopLongitude" /> is out of boundaries. Longitude must be between -180 and 180
+      </assert>
+      <let name="positiononland" value="document(concat('https://acoustic.ices.dk/Services/Validation/PositionOnLand/', current()/StartLatitude, '/', current()/StartLongitude, '/3/'))/Result/Value"/>
+      <assert id="{'Type':'Warning', 'ID': '21'}"
+      	test="$positiononland != 1">
+        Start position is on land.
+        HaulNumber = <value-of select="Number"/>,
+        Latitude = <value-of select="current()/StartLatitude"/>,
+        Longitude = <value-of select="current()/StartLongitude"/>
+      </assert>
+      <assert id="{'Type':'Warning', 'ID': '50'}"
+      	test="string-length(current()/StopLatitude) = 0 or string-length(current()/StopLongitude) = 0 or document(concat('https://acoustic.ices.dk/Services/Validation/PositionOnLand/', current()/StopLatitude, '/', current()/StopLongitude, '/3/'))/Result/Value != 1">
+        Stop position is on land.
+        HaulNumber = <value-of select="Number"/>,
+        Latitude = <value-of select="current()/StopLatitude"/>,
+        Longitude = <value-of select="current()/StopLongitude"/>
+      </assert>
+      <let name="startArea" value="document(concat('https://acoustic.ices.dk/Services/Validation/PositionInSurveyArea/', concat(parent::Cruise/Survey/Code[1]/@IDREF,'~', parent::Cruise/Survey/Code[2]/@IDREF,'~', parent::Cruise/Survey/Code[3]/@IDREF), '/' , current()/StartLatitude, '/', current()/StartLongitude, '/'))/Result/Value"/>
+      <assert id="{'Type':'Warning', 'ID': '61'}"
+      	test="(upper-case(current()/Validity/@IDREF) = 'AC_HAULVALIDITY_I') or $startArea != 0">
+        Reported start position is outside of the survey area boundaries, and the designated survey buffer zone.
+        Latitude = <value-of select="current()/StartLatitude"/>,
+        Longitude = <value-of select="current()/StartLongitude"/>
+      </assert>
+      <assert id="{'Type':'Warning', 'ID': '22'}"
+      	test="(upper-case(current()/Validity/@IDREF) = 'AC_HAULVALIDITY_I') or $startArea != 1">
+        Reported start position is outside of the survey area.
+        Latitude = <value-of select="current()/StartLatitude"/>,
+        Longitude = <value-of select="current()/StartLongitude"/>
+      </assert>
+      <assert id="{'Type':'Warning', 'ID': '68'}"
+      	test="string-length(current()/StopLatitude) = 0 or (upper-case(current()/Validity/@IDREF) = 'AC_HAULVALIDITY_I') or document(concat('https://acoustic.ices.dk/Services/Validation/PositionInSurveyArea/', concat(parent::Cruise/Survey/Code[1]/@IDREF,'~', parent::Cruise/Survey/Code[2]/@IDREF,'~', parent::Cruise/Survey/Code[3]/@IDREF), '/' , current()/StopLatitude, '/', current()/StopLongitude, '/'))/Result/Value != 0">
+        Reported stop position is outside of the survey area boundaries, and the designated survey buffer zone.
+        Latitude = <value-of select="current()/StopLatitude"/>,
+        Longitude = <value-of select="current()/StopLongitude"/>
+      </assert>
+      <assert id="{'Type':'Warning', 'ID': '67'}"
+      	test="string-length(current()/StopLatitude) = 0 or (upper-case(current()/Validity/@IDREF) = 'AC_HAULVALIDITY_I') or (document(concat('https://acoustic.ices.dk/Services/Validation/PositionInSurveyArea/', concat(parent::Cruise/Survey/Code[1]/@IDREF,'~', parent::Cruise/Survey/Code[2]/@IDREF,'~', parent::Cruise/Survey/Code[3]/@IDREF), '/' , current()/StopLatitude, '/', current()/StopLongitude, '/'))/Result/Value != 1)">
+        Reported stop position is outside of the survey area.
+        Latitude = <value-of select="current()/StopLatitude"/>,
+        Longitude = <value-of select="current()/StopLongitude"/>
+      </assert>
+    </rule>
+  </pattern>
+
+  <!--Survey based validation-->
+  <pattern id="WGBIF">
+    <rule context="Cruise/Haul" id="Survey mandatory fields">
+      <assert id="{'Type':'Critical error', 'ID': '38'}"
+              test="(not(contains(parent::Cruise/Survey, 'BIAS')) and not(contains(parent::Cruise/Survey, 'BASS'))) or
+                    ((contains(parent::Cruise/Survey, 'BIAS') or contains(parent::Cruise/Survey, 'BASS')) and string-length(Distance) != 0)">
+        HaulDistanace must be reported in BIAS and BASS surveys.
+      </assert>
+    </rule>
+  </pattern>
+
+  <!--conditional mandatory fields-->
+  <pattern id="conditional mandatory fields">
+    <rule context="Cruise/Haul/Catch" id="Conditional mandatory fields">
+      <assert id="{'Type':'Critical error', 'ID': '13'}" 
+              test="string-length(concat(current()/SpeciesCategoryWeight, current()/SpeciesCategoryNumber)) != 0">
+        Either SpeciesCategoryNumber or SpeciesCategoryWeight must be reported.
+        HaulNumber = <value-of select="parent::Haul/Number"/>,
+        SpeciesCode = <value-of select="tokenize(current()/SpeciesCode/@IDREF, '_')[2]"/>,
+        SpeciesCategory = <value-of select="current()/SpeciesCategory"/>
+      </assert>
+      <assert id="{'Type':'Critical error', 'ID': '17'}"
+              test="(string-length(current()/LengthClass) = 0 and string-length(current()/LengthCode/@IDREF) = 0) or (string-length(current()/LengthCode/@IDREF) != 0 and string-length(current()/NumberAtLength) != 0 and string-length(current()/SpeciesCategoryNumber) != 0 and string-length(current()/SubsampledNumber) != 0)">
+        If length distribution is reported, length code, length class, number at length, SpeciesCategoryNumber, and subsampled number must be reported.
+        HaulNumber = <value-of select="parent::Haul/Number"/>,
+        SpeciesCode = <value-of select="tokenize(current()/SpeciesCode/@IDREF, '_')[2]"/>,
+        SpeciesCategory = <value-of select="current()/SpeciesCategory"/>
+      </assert>
+      <assert id="{'Type':'Critical error', 'ID': '19'}"
+              test="(current()/SpeciesValidity/@IDREF = 'AC_SpeciesValidity_0') or (string-length(current()/SpeciesCategoryWeight) = 0) or ((string-length(current()/SubsampleWeight) != 0) and (string-length(current()/WeightUnit/@IDREF) != 0))">
+        If SpeciesCategoryWeight is reported, SubsampleWeight and WeightUnit must be reported too.
+        HaulNumber = <value-of select="parent::Haul/Number"/>,
+        SpeciesCode = <value-of select="tokenize(current()/SpeciesCode/@IDREF, '_')[2]"/>,
+        SpeciesCategory = <value-of select="current()/SpeciesCategory"/>
+      </assert>
+    </rule>
+    
+  </pattern>
+  
+  <pattern id="Check uniqueness">
+    <rule context="Cruise/Haul/Catch" id="Check uniqueness">
+      <!--Species category-->
+      <assert id="{'Type':'Critical error', 'ID': '10'}" 
+              test="count(parent::node()/Catch[concat(./SpeciesCode/@IDREF, ./SpeciesSex/@IDREF, ./LengthClass, ./SpeciesCategoryNumber, ./SpeciesCategoryWeight) = concat(current()/SpeciesCode/@IDREF, current()/SpeciesSex/@IDREF, current()/LengthClass, current()/SpeciesCategoryNumber, current()/SpeciesCategoryWeight)]) = 1">
+        Combination of certain fields in catch record must be unique. 
+        HaulNumber = <value-of select="parent::Haul/Number"/>,
+        SpeciesCode = <value-of select="tokenize(current()/SpeciesCode/@IDREF, '_')[2]"/>,
+        SpeciesCategory = <value-of select="current()/SpeciesCategory"/>
+      </assert>
+      <!--SpeciesCategoryNumber-->
+      <assert id="{'Type':'Critical error', 'ID': '12'}" 
+                test="count(parent::node()/Catch[./SpeciesCode/@IDREF = current()/SpeciesCode/@IDREF and ./SpeciesCategory = current()/SpeciesCategory and ./SpeciesCategoryNumber != current()/SpeciesCategoryNumber]) = 0">
+          For the same haul, species, sex category, and catch category, catch category number should be the same.
+          HaulNumber = <value-of select="parent::Haul/Number"/>,
+          SpeciesCode = <value-of select="tokenize(current()/SpeciesCode/@IDREF, '_')[2]"/>,
+          SpeciesCategory = <value-of select="current()/SpeciesCategory"/>
+      </assert>
+
+      <!--SpeciesCategoryWeight-->
+      <assert id="{'Type':'Critical error',  'ID': '66'}" 
+                test="count(parent::node()/Catch[./SpeciesCode/@IDREF = current()/SpeciesCode/@IDREF and ./SpeciesCategory = current()/SpeciesCategory and ./SpeciesCategoryWeight != current()/SpeciesCategoryWeight]) = 0">
+          For the same haul, species, sex category, and catch category, catch category weight should be the same.
+          HaulNumber = <value-of select="parent::Haul/Number"/>,
+          SpeciesCode = <value-of select="tokenize(current()/SpeciesCode/@IDREF, '_')[2]"/>,
+          SpeciesCategory = <value-of select="current()/SpeciesCategory"/>
+      </assert>
+    </rule>
+    <rule context="Cruise/Haul" id="Check uniqueness ">
+      <assert id="{'Type':'Critical error', 'ID': '52'}"
+              test="count(parent::node()/Haul[./Number = current()/Number and ./Gear/@IDREF = current()/Gear/@IDREF]) = 1">
+        Combination of CruiseLocalID, HaulGear, and HaulNumber in the Haul records must be unique.
+        HaulNumber = <value-of select="current()/Number"/>,
+        Gear = <value-of select="tokenize(current()/Gear/@IDREF, '_')[2]"/>
+      </assert>
+    </rule>
+    <rule context="Cruise/Survey/Code" id="Check uniqueness  ">
+      <let name="result" value="document(concat('https://acoustic.ices.dk/Services/Validation/CheckCruiseAttributes/', ../../StartDate, '/', ../../EndDate, '/', tokenize(../../Platform/@IDREF, '_')[2], '/', tokenize(../../Country/@IDREF, '_')[3],'/', tokenize(current()/@IDREF, '_')[3], '/', ../../LocalID, '/', 'Organisation_', ../../Organisation/@IDREF , '/'))/Result/Message"/>
+      <assert id="{'Type':'Critical error', 'ID': '62'}"
+        test="string-length($result) = 0">
+        <value-of select="$result"/>
+      </assert>
+    </rule>
+  </pattern>
+
+  <pattern id="Logic check Catch">
+    <rule context="Cruise/Haul/Catch" id="Logic check">
+      <assert id="{'Type':'Critical error', 'ID': '18'}"
+		    test="(string-length(current()/LengthClass) = 0 and string-length(current()/LengthCode/@IDREF) = 0) or (string-length(current()/SubsampledNumber) != 0 and sum(parent::node()/Catch[./SpeciesCode/@IDREF = current()/SpeciesCode/@IDREF and ./SpeciesCategory = current()/SpeciesCategory]/NumberAtLength) = current()/SubsampledNumber)">
+        If length distribution is reported, Sum of Number At Length = subsampled number.
+        HaulNumber = <value-of select="parent::Haul/Number"/>,
+        SpeciesCode = <value-of select="tokenize(current()/SpeciesCode/@IDREF, '_')[2]"/>,
+        SpeciesCategory = <value-of select="current()/SpeciesCategory"/>
+      </assert>
+      <!--<assert id="{'Type':'Warning', 'ID': '41'}"
+         test="upper-case(current()/DataType/@IDREF) != 'AC_CATCHDATATYPE_R' or 60 >= ../Duration">
+        If DataType C is reported, it is expected that number and weight values are raised with one hour of hauling
+        HaulNumber = <value-of select="parent::Haul/Number"/>,
+        SpeciesCode = <value-of select="tokenize(current()/SpeciesCode/@IDREF, '_')[2]"/>,
+        SpeciesCategory = <value-of select="current()/SpeciesCategory"/>
+      </assert>-->
+      <assert id="{'Type':'Critical error', 'ID': '42'}"
+         test="string-length(current()/SpeciesCategoryNumber) = 0 or string-length(current()/SubsampledNumber) = 0 or (number(current()/SpeciesCategoryNumber) >= number(current()/SubsampledNumber))">
+        CatchSubsampledNumber can not be higher than CatchSpeciesCategoryNumber.
+        HaulNumber = <value-of select="parent::Haul/Number"/>,
+        SpeciesCode = <value-of select="tokenize(current()/SpeciesCode/@IDREF, '_')[2]"/>,
+        SpeciesCategory = <value-of select="current()/SpeciesCategory"/>
+      </assert>
+      <assert id="{'Type':'Critical error', 'ID': '43'}"
+       test="string-length(current()/SpeciesCategoryWeight) = 0 or string-length(current()/SubsampleWeight) = 0 or (number(current()/SpeciesCategoryWeight) >= number(current()/SubsampleWeight))">
+        CatchSubsampleWeight can not be higher than CatchSpeciesCategoryWeight.
+        HaulNumber = <value-of select="parent::Haul/Number"/>,
+        SpeciesCode = <value-of select="tokenize(current()/SpeciesCode/@IDREF, '_')[2]"/>,
+        SpeciesCategory = <value-of select="current()/SpeciesCategory"/>
+      </assert>
+      <assert id="{'Type':'Critical error', 'ID': '65'}"
+       test="string-length(current()/WeightAtLength) = 0 or string-length(current()/SubsampleWeight) = 0 or (number(current()/SubsampleWeight) >= number(current()/WeightAtLength))">
+        CatchWeightAtLength can not be higher than CatchSubsampleWeight.
+        HaulNumber = <value-of select="parent::Haul/Number"/>,
+        SpeciesCode = <value-of select="tokenize(current()/SpeciesCode/@IDREF, '_')[2]"/>,
+        SpeciesCategory = <value-of select="current()/SpeciesCategory"/>
+      </assert>
+      <assert id="{'Type':'Critical error', 'ID': '48'}"
+        test="string-length(current()/SpeciesCategoryNumber) = 0  or (number(current()/SpeciesCategoryNumber) >= count(../Catch[./SpeciesCode/@IDREF = current()/SpeciesCode/@IDREF and ./SpeciesCategory = current()/SpeciesCategory]/Biology))">
+        Total count of individuals reported per haul/species/category in the Biology record can not be higher than the SpeciesCategoryNumber in the Catch record.
+        HaulNumber = <value-of select="parent::Haul/Number"/>,
+        SpeciesCode = <value-of select="tokenize(current()/SpeciesCode/@IDREF, '_')[2]"/>,
+        SpeciesCategory = <value-of select="current()/SpeciesCategory"/>
+      </assert>
+      <assert id="{'Type':'Critical error', 'ID': '49'}"
+        test="string-length(current()/SubsampledNumber) = 0 or (number(current()/SubsampledNumber) >= count(../Catch[./SpeciesCode/@IDREF = current()/SpeciesCode/@IDREF and ./SpeciesCategory = current()/SpeciesCategory]/Biology))">
+        Total count of individuals reported per haul/species/category in the Biology record can not be higher than the CatchSubsampledNumber in the Catch record.
+        HaulNumber = <value-of select="parent::Haul/Number"/>,
+        SpeciesCode = <value-of select="tokenize(current()/SpeciesCode/@IDREF, '_')[2]"/>,
+        SpeciesCategory = <value-of select="current()/SpeciesCategory"/>
+      </assert>
+    </rule>
+  </pattern>
+  
+  <pattern id="Logic check SpeciesCode">
+      <!--Reporting only U for one species per Haul is not permitted-->
+    <rule context="Cruise/Haul/Catch/SpeciesCode" id="Logic check">
+      <assert id="{'Type':'Critical error', 'ID': '40'}"
+		test="count(../../Catch[./SpeciesCode/@IDREF = current()/@IDREF and  upper-case(./SpeciesSex/@IDREF) != upper-case('AC_SEX_U')]) != 0">
+        CatchSpeciesSex is reported as U. If no categorizing by sex was performed, leave the field blank.
+        HaulNumber = <value-of select="../../Number"/>,
+        SpeciesCode = <value-of select="tokenize(../SpeciesCode/@IDREF, '_')[2]"/>,
+        SpeciesCategory = <value-of select="../SpeciesCategory"/>
+      </assert>
+    </rule>
+  </pattern>
+
+  <pattern id="Range validation SpeciesCategory">
+    <rule context="Cruise/Haul/Catch/SpeciesCategory" id="Range validation">
+      <assert id="{'Type':'Critical error', 'ID': '9'}" 
+              test="current()> 0 and 11>current()"> 'SpeciesCategory' value <value-of select="current()"/> is out of the legal range. 'SpeciesCategory' should be between 1-10
+      </assert>
+    </rule>
+  </pattern>
+  
+  <!--Not finalized-->
+  <!--<pattern id="WGBIF">
+    <rule context="Haul" id="WGBIF">
+      <assert id="{'Type':'Critical error', 'ID': 'Bottom Depth validation'}" 
+              test="(parent::Cruise/Survey/@IDREF != 'AC_Survey_BIAS' and parent::Cruise/Survey/@IDREF != 'AC_Survey_BASS') or
+                    ((parent::Cruise/Survey/@IDREF = 'AC_Survey_BIAS' or parent::Cruise/Survey/@IDREF = 'AC_Survey_BASS') and string-length(BottomDepth) != 0)">
+        Bottom Depth is mandatory in BIAS and BASS surveys.
+      </assert>
+    </rule>
+  </pattern>-->
+
+  <!--<pattern id="Logic check">
+    <rule context="//*[not(*)]" id="Logic check">
+      <assert id="{'Type':'Critical error', 'ID': '8'}" 
+              test="current()!='-9'">-9 is not allowed value in the field.</assert>
+    </rule>
+  </pattern>-->
+</schema>

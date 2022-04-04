@@ -1,0 +1,39 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+
+<xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema" version="1.0">
+
+  <xsd:element name="CodeType" type="CodeType"/>
+
+  <!--CodeType-->
+  <xsd:complexType name="CodeType">
+    <xsd:sequence>
+      <xsd:element name="Code" type="Code" minOccurs="1" maxOccurs="unbounded"/>
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <!--Code-->
+  <xsd:complexType name="Code">
+    <xsd:sequence>
+      <xsd:element name="Key" type="xsd:string" />
+      <xsd:element name="Description" type="xsd:string" />
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <!--CodeRelation-->
+  <xsd:element name="CodeRelation" type="CodeRelation"/>
+  
+  <xsd:complexType name="CodeRelation">
+    <xsd:sequence>
+      <xsd:element name="Relation" type="Relation" minOccurs="1" maxOccurs="unbounded"/>
+    </xsd:sequence>
+  </xsd:complexType>
+
+  <!--Relation-->
+  <xsd:complexType name="Relation">
+    <xsd:sequence>
+      <xsd:element name="CodeOne" type="xsd:string" />
+      <xsd:element name="CodeSecond" type="xsd:string" />
+    </xsd:sequence>
+  </xsd:complexType>
+
+</xsd:schema>
